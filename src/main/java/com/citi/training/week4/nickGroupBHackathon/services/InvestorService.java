@@ -6,6 +6,7 @@ import java.util.Collection;
 
 public interface InvestorService {
     Collection<Investor> getAllInvestors();
+    Collection<Investor> findInvestorsByEmail(String email);
 }
 
 

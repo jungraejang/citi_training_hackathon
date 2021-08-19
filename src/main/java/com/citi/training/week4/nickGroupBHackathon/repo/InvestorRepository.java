@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Collection;
 
 public interface InvestorRepository extends JpaRepository<Investor, Integer> {
-    Collection<Investor> findByName(String name);
+    Collection<Investor> findByEmail(String email);
 }

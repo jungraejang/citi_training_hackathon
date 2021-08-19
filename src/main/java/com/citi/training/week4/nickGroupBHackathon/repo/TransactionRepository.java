@@ -7,4 +7,5 @@ import java.util.Collection;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Integer> {
     Collection<Transaction> findByInvestorId(Integer investorId);
+
 }

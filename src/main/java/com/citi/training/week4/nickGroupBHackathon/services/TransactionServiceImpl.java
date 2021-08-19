@@ -18,4 +18,9 @@ public class TransactionServiceImpl implements TransactionService {
         return transactionRepository.findAll();
     }
 
+    @Override
+    public Collection<Transaction> getTransactionsByInvestorId(int id) {
+        return transactionRepository.findByInvestorId(id);
+    }
+
 }

@@ -6,6 +6,7 @@ import java.util.Collection;
 
 public interface TransactionService {
     Collection<Transaction> getAllTransactions();
+    Collection<Transaction> getTransactionsByInvestorId(int id);
 }
 
 
