@@ -16,6 +16,7 @@ import java.util.*;
 public class TransactionController {
 
     Hashtable<String, Integer> symbol = new Hashtable<>();
+    Hashtable<String, Double> cashInfo = new Hashtable<>();
 
     @Autowired
     private TransactionService transactionService;
@@ -30,13 +31,20 @@ public class TransactionController {
     public Collection<Transaction> getTransactionsByInvestor(@PathVariable("id") int id) {
         Collection<Transaction> investorTransactions = transactionService.getTransactionsByInvestorId(id);
         Iterator<Transaction> iterator = investorTransactions.iterator();
+        Collection<Transaction> investments=new ArrayList<>();
 
         while(iterator.hasNext()) {
-            symbol.put(iterator.next().getSymbol(), iterator.next().getAmount());
+            Transaction next = iterator.next();
+            if(next.getType().equals("Cash")){
+                cashInfo.put(next.getSymbol(), next.getPrice());
+            }else {
+                symbol.put(next.getSymbol(), next.getAmount());
+                investments.add(next);
+            }
         }
 //        return transactionService.getTransactionsByInvestorId(id);
 //        portfolioTotal();
-        return investorTransactions;
+        return investments;
     }
 //    throws IOException
 
@@ -76,6 +84,22 @@ public class TransactionController {
 //        stock.print();
         return totalValue ;
     }
+    /*@RequestMapping(method = RequestMethod.GET, value = "/{id}/total_over_time")
+    public Double portfolioTotalOverTime(@PathVariable("id") int id) throws IOException {
+        Double currentValue = portfolioTotal(id);
+        Set<String> keys = symbol.keySet();
+        Iterator<String> iteratorKeys = keys.iterator();
+
+        Collection<Integer> values = symbol.values();
+        Iterator<Integer> iteratorValues = values.iterator();
+
+        Double totalValue = 0.0;
+        while(iteratorKeys.hasNext()) {
+            Stock stock = YahooFinance.get(iteratorKeys.next());
+            totalValue += iteratorValues.next() * stock.getQuote().getPrice().doubleValue();
+        }
+        return totalValue ;
+    }*/
 
 
 
