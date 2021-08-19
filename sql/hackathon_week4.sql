@@ -1,4 +1,3 @@
-
 CREATE TABLE `conygre`.`investors` (
                                        `id` INT NOT NULL AUTO_INCREMENT,
                                        `name` VARCHAR(45) NOT NULL,
@@ -6,7 +5,7 @@ CREATE TABLE `conygre`.`investors` (
                                        PRIMARY KEY (`id`),
                                        UNIQUE INDEX `email_UNIQUE` (`email` ASC) VISIBLE);
 
--- DROP TABLE conygre.transactions;
+DROP TABLE conygre.transactions;
 
 CREATE TABLE `conygre`.`transactions`(
                                          `id` INT NOT NULL AUTO_INCREMENT,
