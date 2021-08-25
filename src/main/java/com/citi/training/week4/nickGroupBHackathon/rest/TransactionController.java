@@ -269,6 +269,62 @@ public class TransactionController {
 
     }
 
+    @RequestMapping(method = RequestMethod.GET, value = "/{id}/market_movers")
+    public ArrayList<Object> marketMovers(@PathVariable("id") int id) throws IOException {
+        getTransactionsByInvestor(id);
+
+        Set<String> keys = symbol.keySet();
+        Iterator<String> iteratorKeys = keys.iterator();
+
+        System.out.println(symbol);
+        Hashtable<String,Double> marketMovers = new Hashtable<>();
+        Hashtable<String,Double> maxs = new Hashtable<>();
+        Hashtable<String,Double> mins = new Hashtable<>();
+        while(iteratorKeys.hasNext()) {
+            Stock stock = YahooFinance.get(iteratorKeys.next());
+            Double stockChange = stock.getQuote().getPrice().doubleValue() - stock.getQuote().getPreviousClose().doubleValue();
+            Double percentChange = (stockChange*100) / (Math.abs(stock.getQuote().getPreviousClose().doubleValue()));
+            marketMovers.put(stock.getSymbol(),percentChange);
+        }
+        for(int i = 0; i < 5 ; i++) {
+            Double localMax = 0.0;
+            String maxString = "";
+            Double localMin = 0.0;
+            String minString = "";
+
+            Enumeration e = marketMovers.keys();
+            while(e.hasMoreElements()) {
+                String s = e.nextElement().toString();
+                if(marketMovers.get(s) > localMax) {
+                    localMax = marketMovers.get(s);
+                    maxString = s;
+                }
+                if(marketMovers.get(s) < localMin) {
+                    localMin = marketMovers.get(s);
+                    minString = s;
+                }
+            }
+
+            if(!maxString.isEmpty()){
+                maxs.put(maxString,localMax);
+                marketMovers.remove(maxString);
+            }
+            if(!minString.isEmpty()){
+                mins.put(minString, localMin);
+                marketMovers.remove(minString);
+            }
+
+
+        }
+
+
+
+        ArrayList<Object> maxsAndMins = new ArrayList<>();
+        maxsAndMins.add(maxs);
+        maxsAndMins.add(mins); //sort in frontend
+        return maxsAndMins;
+    }
+
 
 
 }
