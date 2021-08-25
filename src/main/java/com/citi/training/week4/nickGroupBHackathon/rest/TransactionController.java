@@ -124,7 +124,8 @@ public class TransactionController {
         ArrayList<Double> changeValue = new ArrayList<>();
         Double prevValWeek = 0.0;
         Double prevValMonth = 0.0;
-        //Double prevValQuarter = 0.0;
+        Double prevValQuarter = 0.0;
+        Double prevValYear = 0.0;
         Set<String> keys = symbol.keySet();
         Iterator<String> iteratorKeys = keys.iterator();
 
@@ -145,6 +146,15 @@ public class TransactionController {
             List<HistoricalQuote> months = stock.getHistory(Interval.MONTHLY);
             HistoricalQuote month = months.get(months.size()-2);
             Double priceMonth = month.getClose().doubleValue();
+
+            HistoricalQuote quarter = months.get(months.size()-4);
+            Double priceQuarter = quarter.getClose().doubleValue();
+
+            Calendar firstDayOfYear = Calendar.getInstance();
+            firstDayOfYear.set(firstDayOfYear.get(Calendar.YEAR),Calendar.JANUARY,1);
+            List<HistoricalQuote> yearToDate = stock.getHistory(firstDayOfYear,Interval.DAILY);
+            HistoricalQuote beginningOfYear = yearToDate.get(0);
+            Double priceYear = beginningOfYear.getClose().doubleValue();
             for(int i =0;i<amountsS.size();i++){
                 Date date = Date.from(timeList.get(i).atZone(ZoneId.systemDefault()).toInstant());
                 Calendar calendar = Calendar.getInstance();
@@ -155,11 +165,19 @@ public class TransactionController {
                 if(calendar.before(month.getDate())) {
                     prevValMonth += priceMonth * amountsS.get(i);
                 }
+                if(calendar.before(quarter.getDate())) {
+                    prevValQuarter += priceQuarter * amountsS.get(i);
+                }
+                if(calendar.before(beginningOfYear.getDate())) {
+                    prevValYear += priceYear * amountsS.get(i);
+                }
             }
         }
-        System.out.println(currentValue+" "+prevValMonth+" "+(currentValue-prevValMonth));
+        System.out.println(currentValue+" "+prevValYear+" "+(currentValue-prevValYear));
         changeValue.add((currentValue-prevValWeek));
         changeValue.add((currentValue-prevValMonth));
+        changeValue.add((currentValue-prevValQuarter));
+        changeValue.add((currentValue-prevValYear));
 
         return changeValue ;
     }
