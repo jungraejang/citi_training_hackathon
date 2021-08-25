@@ -9,10 +9,13 @@ import yahoofinance.Stock;
 import yahoofinance.YahooFinance;
 import yahoofinance.histquotes.HistoricalQuote;
 import yahoofinance.histquotes.Interval;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
+import java.time.Month;
 import java.time.ZoneId;
 import java.util.*;
 
@@ -155,6 +158,7 @@ public class TransactionController {
                 totalValue += amountVals.get(i) * stock.getQuote().getPrice().doubleValue();
             }
             allStockValues.put(stock.getSymbol(),totalValue);
+
         }
         ArrayList<Object> totals = new ArrayList<>();
         Double allTotal = 0.0;
@@ -165,6 +169,106 @@ public class TransactionController {
         totals.add(allStockValues);
         return totals;
     }
+
+    @RequestMapping(method = RequestMethod.GET, value = "/{id}/cash_total")
+    public ArrayList<Object> getInvestorValuation(@PathVariable("id") int id) {
+        getTransactionsByInvestor(id);
+
+        Set<String> keys = cashInfo.keySet();
+        Iterator<String> iteratorKeys = keys.iterator();
+
+        Collection<ArrayList<Double>> values = cashInfo.values();
+        Iterator<ArrayList<Double>> iteratorValues = values.iterator();
+        Double cashValue = 0.0;
+
+        Hashtable<String,Double> allCashValues = new Hashtable<>();
+
+        while (iteratorKeys.hasNext()) {
+            String next = iteratorKeys.next();
+            ArrayList<Double> nextValue = iteratorValues.next();
+            Double cashAccTotal = 0.0;
+            for(Double n:nextValue) {
+                cashAccTotal += n;
+            }
+            allCashValues.put(next,cashAccTotal);
+            cashValue += cashAccTotal;
+        }
+
+        ArrayList<Object> totals = new ArrayList<>();
+        totals.add(cashValue);
+        totals.add(allCashValues);
+
+        return totals;
+
+
+    }
+
+    @RequestMapping(method = RequestMethod.GET, value = "/{id}/cash_total_over_time")
+    public ArrayList<Double> getInvestorValuationOverTime(@PathVariable("id") int id) {
+        Double currentValue = Double.valueOf(getInvestorValuation(id).get(0).toString());
+
+        LocalDateTime currentTime = LocalDateTime.now();
+        LocalDateTime lastWeek = currentTime.minusWeeks(1);
+        LocalDateTime lastMonth= currentTime.minusMonths(1);
+        LocalDateTime lastQuarter = currentTime.minusMonths(3);
+        LocalDateTime yearToDate = LocalDateTime.of(currentTime.getYear(), Month.JANUARY, 1, 0,0,0);
+
+        Set<String> keys = cashInfo.keySet();
+        Iterator<String> iteratorKeys = keys.iterator();
+
+        Collection<ArrayList<Double>> values = cashInfo.values();
+        Iterator<ArrayList<Double>> iteratorValues = values.iterator();
+        Double cashValueWeek = 0.0;
+        Double cashValueMonth = 0.0;
+        Double cashValueQuarter = 0.0;
+        Double cashValueYear = 0.0;
+
+        ArrayList<Double> allCashTotalOverTime = new ArrayList<>();
+
+        Collection<ArrayList<LocalDateTime>> times = cashInfoTime.values();
+        Iterator<ArrayList<LocalDateTime>> iteratorTimes = times.iterator();
+
+        while (iteratorKeys.hasNext()) {
+            String next = iteratorKeys.next();
+            ArrayList<Double> nextValue = iteratorValues.next();
+            ArrayList<LocalDateTime> nextTime = iteratorTimes.next();
+            Double cashAccTotalWeek = 0.0;
+            Double cashAccTotalMonth = 0.0;
+            Double cashAccTotalQuarter = 0.0;
+            Double cashAccTotalYear = 0.0;
+            for(int i = 0; i<nextValue.size(); i++) {
+                if(nextTime.get(i).isBefore(lastWeek)) {
+                    cashAccTotalWeek += nextValue.get(i);
+                }
+                if(nextTime.get(i).isBefore(lastMonth)) {
+                    cashAccTotalMonth += nextValue.get(i);
+                }
+                if(nextTime.get(i).isBefore(lastQuarter)) {
+                    cashAccTotalQuarter += nextValue.get(i);
+                }
+                if(nextTime.get(i).isBefore(yearToDate)) {
+                    cashAccTotalYear += nextValue.get(i);
+                }
+
+            }
+
+            cashValueWeek += cashAccTotalWeek;
+            cashValueMonth += cashAccTotalMonth;
+            cashValueQuarter += cashAccTotalQuarter;
+            cashValueYear += cashAccTotalYear;
+        }
+
+        allCashTotalOverTime.add(currentValue-cashValueWeek);
+        allCashTotalOverTime.add(currentValue-cashValueMonth);
+        allCashTotalOverTime.add(currentValue-cashValueQuarter);
+        allCashTotalOverTime.add(currentValue-cashValueYear);
+
+
+        return allCashTotalOverTime;
+
+
+    }
+
 
 
 }
