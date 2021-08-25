@@ -71,56 +71,11 @@ public class TransactionController {
                 investments.add(next);
             }
         }
-//        return transactionService.getTransactionsByInvestorId(id);
-//        portfolioTotal();
         return investments;
-    }
-//    throws IOException
-
-    @RequestMapping(method = RequestMethod.GET, value = "/{id}/total")
-    public Double portfolioTotal(@PathVariable("id") int id) throws IOException {
-        getTransactionsByInvestor(id);
-//        for(String s, Integer i:symbol) {
-//            Stock stock = YahooFinance.get(s);
-//            System.out.println(stock);
-//        }
-        Set<String> keys = symbol.keySet();
-        Iterator<String> iteratorKeys = keys.iterator();
-
-        Collection<ArrayList<Integer>> values = symbol.values();
-        Iterator<ArrayList<Integer>> iteratorValues = values.iterator();
-
-        System.out.println(symbol);
-        Double totalValue = 0.0;
-        while(iteratorKeys.hasNext()) {
-            Stock stock = YahooFinance.get(iteratorKeys.next());
-            ArrayList<Integer> amountVals = iteratorValues.next();
-            for(int i =0;i<amountVals.size();i++){
-                totalValue += amountVals.get(i) * stock.getQuote().getPrice().doubleValue();
-                System.out.println(stock.getSymbol()+" "+stock.getQuote().getPrice().doubleValue());
-            }
-//            symbol.put(iterator.next().getSymbol(), iterator.next().getAmount());
-        }
-//        Stock stock = YahooFinance.get("TSLA");
-//        System.out.println(stock);
-//        String[] arr = Arrays.copyOf(symbol.toArray(), symbol.size(), String[].class);
-////        arr = symbol.toArray(arr);
-//        System.out.println("****************" + arr + "***************");
-//        Map<String, Stock> stocks = YahooFinance.get(arr);
-//        System.out.println("************ \n" + stocks + "********* \n");
-//        Stock stock = YahooFinance.get(symbol);
-//
-//        BigDecimal price = stock.getQuote().getPrice();
-//        BigDecimal change = stock.getQuote().getChangeInPercent();
-//        BigDecimal peg = stock.getStats().getPeg();
-//        BigDecimal dividend = stock.getDividend().getAnnualYieldPercent();
-//
-//        stock.print();
-        return totalValue ;
     }
     @RequestMapping(method = RequestMethod.GET, value = "/{id}/total_over_time")
     public Collection<Double> portfolioTotalOverTime(@PathVariable("id") int id) throws IOException {
-        Double currentValue = portfolioTotal(id);
+        Double currentValue = Double.valueOf(stockTotals(id).get(0).toString());
         ArrayList<Double> changeValue = new ArrayList<>();
         Double prevValWeek = 0.0;
         Double prevValMonth = 0.0;
@@ -181,9 +136,35 @@ public class TransactionController {
 
         return changeValue ;
     }
+    @RequestMapping(method = RequestMethod.GET, value = "/{id}/stock_totals")
+    public ArrayList<Object> stockTotals(@PathVariable("id") int id) throws IOException {
+        getTransactionsByInvestor(id);
+        Set<String> keys = symbol.keySet();
+        Iterator<String> iteratorKeys = keys.iterator();
 
+        Collection<ArrayList<Integer>> values = symbol.values();
+        Iterator<ArrayList<Integer>> iteratorValues = values.iterator();
 
-
+        System.out.println(symbol);
+        Hashtable<String,Double> allStockValues = new Hashtable<>();
+        while(iteratorKeys.hasNext()) {
+            Double totalValue = 0.0;
+            Stock stock = YahooFinance.get(iteratorKeys.next());
+            ArrayList<Integer> amountVals = iteratorValues.next();
+            for(int i =0;i<amountVals.size();i++){
+                totalValue += amountVals.get(i) * stock.getQuote().getPrice().doubleValue();
+            }
+            allStockValues.put(stock.getSymbol(),totalValue);
+        }
+        ArrayList<Object> totals = new ArrayList<>();
+        Double allTotal = 0.0;
+        for(Double vals:allStockValues.values()){
+            allTotal+=vals;
+        }
+        totals.add(allTotal);
+        totals.add(allStockValues);
+        return totals;
+    }
 
 
 }
