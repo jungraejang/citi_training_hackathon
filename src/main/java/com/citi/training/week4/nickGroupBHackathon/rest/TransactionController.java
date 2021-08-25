@@ -79,7 +79,7 @@ public class TransactionController {
 
     @RequestMapping(method = RequestMethod.GET, value = "/{id}/total")
     public Double portfolioTotal(@PathVariable("id") int id) throws IOException {
-        transactionService.getTransactionsByInvestorId(id);
+        getTransactionsByInvestor(id);
 //        for(String s, Integer i:symbol) {
 //            Stock stock = YahooFinance.get(s);
 //            System.out.println(stock);
@@ -90,6 +90,7 @@ public class TransactionController {
         Collection<ArrayList<Integer>> values = symbol.values();
         Iterator<ArrayList<Integer>> iteratorValues = values.iterator();
 
+        System.out.println(symbol);
         Double totalValue = 0.0;
         while(iteratorKeys.hasNext()) {
             Stock stock = YahooFinance.get(iteratorKeys.next());
@@ -120,8 +121,10 @@ public class TransactionController {
     @RequestMapping(method = RequestMethod.GET, value = "/{id}/total_over_time")
     public Collection<Double> portfolioTotalOverTime(@PathVariable("id") int id) throws IOException {
         Double currentValue = portfolioTotal(id);
-        Collection<Double> changeValue = new ArrayList<>();
-        Double prevVal = 0.0;
+        ArrayList<Double> changeValue = new ArrayList<>();
+        Double prevValWeek = 0.0;
+        Double prevValMonth = 0.0;
+        //Double prevValQuarter = 0.0;
         Set<String> keys = symbol.keySet();
         Iterator<String> iteratorKeys = keys.iterator();
 
@@ -131,50 +134,33 @@ public class TransactionController {
         Iterator<ArrayList<LocalDateTime>> iteratorTimes = times.iterator();
 
 
-        //last week
-        prevVal = 0.0;
         while(iteratorKeys.hasNext()) {
             Stock stock = YahooFinance.get(iteratorKeys.next(),true);
             List<HistoricalQuote> weeks = stock.getHistory(Interval.WEEKLY);
             HistoricalQuote week = weeks.get(weeks.size()-2);
-            Double price = week.getClose().doubleValue();
+            Double priceWeek = week.getClose().doubleValue();
             ArrayList<Integer> amountsS = iteratorValues.next();
             ArrayList<LocalDateTime> timeList = iteratorTimes.next();
+
+            List<HistoricalQuote> months = stock.getHistory(Interval.MONTHLY);
+            HistoricalQuote month = months.get(months.size()-2);
+            Double priceMonth = month.getClose().doubleValue();
             for(int i =0;i<amountsS.size();i++){
                 Date date = Date.from(timeList.get(i).atZone(ZoneId.systemDefault()).toInstant());
                 Calendar calendar = Calendar.getInstance();
                 calendar.setTime(date);
                 if(calendar.before(week.getDate())) {
-                    prevVal += price * amountsS.get(i);
+                    prevValWeek += priceWeek * amountsS.get(i);
+                }
+                if(calendar.before(month.getDate())) {
+                    prevValMonth += priceMonth * amountsS.get(i);
                 }
             }
         }
-        changeValue.add((currentValue-prevVal));
-/*
-        //last month
-        prevVal = 0.0;
-        while(iteratorKeys.hasNext()) {
-            Stock stock = YahooFinance.get(iteratorKeys.next());
-            prevVal += iteratorValues.next() * stock.getQuote().getPrice().doubleValue();
-        }
-        changeValue.add((currentValue-prevVal));
+        System.out.println(currentValue+" "+prevValMonth+" "+(currentValue-prevValMonth));
+        changeValue.add((currentValue-prevValWeek));
+        changeValue.add((currentValue-prevValMonth));
 
-        //last quarter
-        prevVal = 0.0;
-        while(iteratorKeys.hasNext()) {
-            Stock stock = YahooFinance.get(iteratorKeys.next());
-            prevVal += iteratorValues.next() * stock.getQuote().getPrice().doubleValue();
-        }
-        changeValue.add((currentValue-prevVal));
-
-        //year to date
-        prevVal = 0.0;
-        while(iteratorKeys.hasNext()) {
-            Stock stock = YahooFinance.get(iteratorKeys.next());
-            prevVal += iteratorValues.next() * stock.getQuote().getPrice().doubleValue();
-        }
-        changeValue.add((currentValue-prevVal));
-*/
         return changeValue ;
     }
 
