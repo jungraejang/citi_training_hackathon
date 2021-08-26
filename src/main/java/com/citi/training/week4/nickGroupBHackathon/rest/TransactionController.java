@@ -141,6 +141,9 @@ public class TransactionController {
     }
     @RequestMapping(method = RequestMethod.GET, value = "/{id}/stock_totals")
     public ArrayList<Object> stockTotals(@PathVariable("id") int id) throws IOException {
+
+        symbol = new Hashtable<>();
+
         getTransactionsByInvestor(id);
         Set<String> keys = symbol.keySet();
         Iterator<String> iteratorKeys = keys.iterator();
@@ -172,6 +175,9 @@ public class TransactionController {
 
     @RequestMapping(method = RequestMethod.GET, value = "/{id}/cash_total")
     public ArrayList<Object> getInvestorValuation(@PathVariable("id") int id) {
+
+        cashInfo = new Hashtable<>();
+
         getTransactionsByInvestor(id);
 
         Set<String> keys = cashInfo.keySet();
@@ -184,11 +190,15 @@ public class TransactionController {
         Hashtable<String,Double> allCashValues = new Hashtable<>();
 
         while (iteratorKeys.hasNext()) {
+            System.out.println("In while loop \n");
             String next = iteratorKeys.next();
             ArrayList<Double> nextValue = iteratorValues.next();
             Double cashAccTotal = 0.0;
+            System.out.println("cash acc total before for loop" + cashAccTotal);
             for(Double n:nextValue) {
+                System.out.println("n" + n);
                 cashAccTotal += n;
+                System.out.println("cash acc total" + cashAccTotal);
             }
             allCashValues.put(next,cashAccTotal);
             cashValue += cashAccTotal;
@@ -205,6 +215,9 @@ public class TransactionController {
 
     @RequestMapping(method = RequestMethod.GET, value = "/{id}/cash_total_over_time")
     public ArrayList<Double> getInvestorValuationOverTime(@PathVariable("id") int id) {
+
+        cashInfo = new Hashtable<>();
+        cashInfoTime = new Hashtable<>();
         Double currentValue = Double.valueOf(getInvestorValuation(id).get(0).toString());
 
         LocalDateTime currentTime = LocalDateTime.now();
@@ -271,6 +284,8 @@ public class TransactionController {
 
     @RequestMapping(method = RequestMethod.GET, value = "/{id}/market_movers")
     public ArrayList<Object> marketMovers(@PathVariable("id") int id) throws IOException {
+        symbol = new Hashtable<>();
+
         getTransactionsByInvestor(id);
 
         Set<String> keys = symbol.keySet();
