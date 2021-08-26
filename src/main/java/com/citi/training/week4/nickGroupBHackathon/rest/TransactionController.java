@@ -349,8 +349,8 @@ public class TransactionController {
         return maxsAndMins;
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/{id}/graph_month")
-    public Collection<Double> graphNetWorthMonth(@PathVariable("id") int id) throws IOException {
+    @RequestMapping(method = RequestMethod.GET, value = "/{id}/graph_week")
+    public Collection<Double> graphNetWorthWeek(@PathVariable("id") int id) throws IOException {
         symbol = new Hashtable<>();
         cashInfo = new Hashtable<>();
         symbolTime = new Hashtable<>();
@@ -367,7 +367,7 @@ public class TransactionController {
         LocalDateTime pastTime = currentTime;
 
         changeValue.add(currentValue+currentCashValue);
-        for (int j = 1; j < 30; j++) {
+        for (int j = 1; j < 7; j++) {
             pastTime = pastTime.minusDays(1);
             Date date = Date.from(pastTime.atZone(ZoneId.systemDefault()).toInstant());
             Calendar calendar = Calendar.getInstance();
@@ -387,12 +387,11 @@ public class TransactionController {
                 ArrayList<Integer> amountsS = iteratorValues.next();
                 ArrayList<LocalDateTime> timeList = iteratorTimes.next();
 
-                List<HistoricalQuote> dayQuotes = stock.getHistory(calendar, Interval.DAILY);
-                HistoricalQuote dayQuote = dayQuotes.get(0);
+                HistoricalQuote dayQuote = stock.getHistory(calendar, Interval.DAILY).get(0);
+                Calendar dayCalendar = Calendar.getInstance();
                 Double dayPrice = dayQuote.getClose().doubleValue();
                 for (int i = 0; i < amountsS.size(); i++) {
                     Date stockDate = Date.from(timeList.get(i).atZone(ZoneId.systemDefault()).toInstant());
-                    Calendar dayCalendar = Calendar.getInstance();
                     dayCalendar.setTime(stockDate);
                     if (dayCalendar.before(dayQuote.getDate())) {
                         prevVal += dayPrice * amountsS.get(i);
@@ -404,23 +403,23 @@ public class TransactionController {
 
             Collection<ArrayList<Double>> cashValues = cashInfo.values();
             Iterator<ArrayList<Double>> iteratorCashValues = cashValues.iterator();
-            Double prevCashValue = 0.0;
 
             Collection<ArrayList<LocalDateTime>> cashTimes = cashInfoTime.values();
             Iterator<ArrayList<LocalDateTime>> iteratorCashTimes = cashTimes.iterator();
 
             while (iteratorCashKeys.hasNext()) {
+                String next = iteratorCashKeys.next();
                 ArrayList<Double> nextValue = iteratorCashValues.next();
                 ArrayList<LocalDateTime> nextTime = iteratorCashTimes.next();
                 for(int i = 0; i<nextValue.size(); i++) {
                     if(nextTime.get(i).isBefore(pastTime)) {
-                        prevCashValue += nextValue.get(i);
+                        prevVal += nextValue.get(i);
                     }
                 }
 
             }
 
-            changeValue.add(prevVal+prevCashValue);
+            changeValue.add(prevVal);
         }
         return changeValue;
     }
