@@ -433,9 +433,9 @@ public class TransactionController {
         getTransactionsByInvestor(id);
         ArrayList<Double> yearlyValue = new ArrayList<>();
 
+        Calendar firstDayOfYear = Calendar.getInstance();
         for (int j = 0; j < 5; j++) {
 
-            Calendar firstDayOfYear = Calendar.getInstance();
             firstDayOfYear.set(firstDayOfYear.get(Calendar.YEAR)-j,0,1);
 
             Set<String> keys = symbol.keySet();
