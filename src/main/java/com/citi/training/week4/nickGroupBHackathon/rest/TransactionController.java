@@ -95,21 +95,37 @@ public class TransactionController {
 
         while(iteratorKeys.hasNext()) {
             Stock stock = YahooFinance.get(iteratorKeys.next(),true);
-            List<HistoricalQuote> weeks = stock.getHistory(Interval.WEEKLY);
-            HistoricalQuote week = weeks.get(weeks.size()-2);
+
+            LocalDateTime currentTime = LocalDateTime.now();
+            LocalDateTime lastWeek = currentTime.minusWeeks(1);
+            Date weekDate = Date.from(lastWeek.atZone(ZoneId.systemDefault()).toInstant());
+            Calendar weekCalendar = Calendar.getInstance();
+            weekCalendar.setTime(weekDate);
+            List<HistoricalQuote> weeks = stock.getHistory(weekCalendar,Interval.DAILY);
+            HistoricalQuote week = weeks.get(0);
             Double priceWeek = week.getClose().doubleValue();
+
             ArrayList<Integer> amountsS = iteratorValues.next();
             ArrayList<LocalDateTime> timeList = iteratorTimes.next();
 
-            List<HistoricalQuote> months = stock.getHistory(Interval.MONTHLY);
-            HistoricalQuote month = months.get(months.size()-2);
+            LocalDateTime lastMonth = currentTime.minusMonths(1);
+            Date monthDate = Date.from(lastMonth.atZone(ZoneId.systemDefault()).toInstant());
+            Calendar monthCalendar = Calendar.getInstance();
+            monthCalendar.setTime(monthDate);
+            List<HistoricalQuote> months = stock.getHistory(monthCalendar,Interval.DAILY);
+            HistoricalQuote month = months.get(0);
             Double priceMonth = month.getClose().doubleValue();
 
-            HistoricalQuote quarter = months.get(months.size()-4);
+            LocalDateTime lastQuarter = currentTime.minusMonths(3);
+            Date quarterDate = Date.from(lastQuarter.atZone(ZoneId.systemDefault()).toInstant());
+            Calendar quarterCalendar = Calendar.getInstance();
+            quarterCalendar.setTime(quarterDate);
+            List<HistoricalQuote> quarters = stock.getHistory(quarterCalendar,Interval.DAILY);
+            HistoricalQuote quarter = quarters.get(0);
             Double priceQuarter = quarter.getClose().doubleValue();
 
             Calendar firstDayOfYear = Calendar.getInstance();
-            firstDayOfYear.set(firstDayOfYear.get(Calendar.YEAR),Calendar.JANUARY,1);
+            firstDayOfYear.set(firstDayOfYear.get(Calendar.YEAR),0,1);
             List<HistoricalQuote> yearToDate = stock.getHistory(firstDayOfYear,Interval.DAILY);
             HistoricalQuote beginningOfYear = yearToDate.get(0);
             Double priceYear = beginningOfYear.getClose().doubleValue();
@@ -131,7 +147,6 @@ public class TransactionController {
                 }
             }
         }
-        System.out.println(currentValue+" "+prevValYear+" "+(currentValue-prevValYear));
         changeValue.add((currentValue-prevValWeek));
         changeValue.add((currentValue-prevValMonth));
         changeValue.add((currentValue-prevValQuarter));
@@ -151,7 +166,6 @@ public class TransactionController {
         Collection<ArrayList<Integer>> values = symbol.values();
         Iterator<ArrayList<Integer>> iteratorValues = values.iterator();
 
-        System.out.println(symbol);
         Hashtable<String,Double> allStockValues = new Hashtable<>();
         while(iteratorKeys.hasNext()) {
             Double totalValue = 0.0;
@@ -190,15 +204,11 @@ public class TransactionController {
         Hashtable<String,Double> allCashValues = new Hashtable<>();
 
         while (iteratorKeys.hasNext()) {
-            System.out.println("In while loop \n");
             String next = iteratorKeys.next();
             ArrayList<Double> nextValue = iteratorValues.next();
             Double cashAccTotal = 0.0;
-            System.out.println("cash acc total before for loop" + cashAccTotal);
             for(Double n:nextValue) {
-                System.out.println("n" + n);
                 cashAccTotal += n;
-                System.out.println("cash acc total" + cashAccTotal);
             }
             allCashValues.put(next,cashAccTotal);
             cashValue += cashAccTotal;
@@ -291,7 +301,6 @@ public class TransactionController {
         Set<String> keys = symbol.keySet();
         Iterator<String> iteratorKeys = keys.iterator();
 
-        System.out.println(symbol);
         Hashtable<String,Double> marketMovers = new Hashtable<>();
         Hashtable<String,Double> maxs = new Hashtable<>();
         Hashtable<String,Double> mins = new Hashtable<>();
@@ -340,6 +349,80 @@ public class TransactionController {
         return maxsAndMins;
     }
 
+    @RequestMapping(method = RequestMethod.GET, value = "/{id}/graph_month")
+    public Collection<Double> graphNetWorthMonth(@PathVariable("id") int id) throws IOException {
+        symbol = new Hashtable<>();
+        cashInfo = new Hashtable<>();
+        symbolTime = new Hashtable<>();
+        cashInfoTime = new Hashtable<>();
+        Double currentValue = Double.valueOf(stockTotals(id).get(0).toString());
+        symbol = new Hashtable<>();
+        cashInfo = new Hashtable<>();
+        symbolTime = new Hashtable<>();
+        cashInfoTime = new Hashtable<>();
+        Double currentCashValue = Double.valueOf(getInvestorValuation(id).get(0).toString());
+        ArrayList<Double> changeValue = new ArrayList<>();
 
+        LocalDateTime currentTime = LocalDateTime.now();
+        LocalDateTime pastTime = currentTime;
+
+        changeValue.add(currentValue+currentCashValue);
+        for (int j = 1; j < 30; j++) {
+            pastTime = pastTime.minusDays(1);
+            Date date = Date.from(pastTime.atZone(ZoneId.systemDefault()).toInstant());
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(date);
+            Set<String> keys = symbol.keySet();
+            Iterator<String> iteratorKeys = keys.iterator();
+            Double prevVal = 0.0;
+
+            Collection<ArrayList<Integer>> values = symbol.values();
+            Iterator<ArrayList<Integer>> iteratorValues = values.iterator();
+            Collection<ArrayList<LocalDateTime>> times = symbolTime.values();
+            Iterator<ArrayList<LocalDateTime>> iteratorTimes = times.iterator();
+            while (iteratorKeys.hasNext()) {
+                Stock stock = YahooFinance.get(iteratorKeys.next(), true);
+
+
+                ArrayList<Integer> amountsS = iteratorValues.next();
+                ArrayList<LocalDateTime> timeList = iteratorTimes.next();
+
+                List<HistoricalQuote> dayQuotes = stock.getHistory(calendar, Interval.DAILY);
+                HistoricalQuote dayQuote = dayQuotes.get(0);
+                Double dayPrice = dayQuote.getClose().doubleValue();
+                for (int i = 0; i < amountsS.size(); i++) {
+                    Date stockDate = Date.from(timeList.get(i).atZone(ZoneId.systemDefault()).toInstant());
+                    Calendar dayCalendar = Calendar.getInstance();
+                    dayCalendar.setTime(stockDate);
+                    if (dayCalendar.before(dayQuote.getDate())) {
+                        prevVal += dayPrice * amountsS.get(i);
+                    }
+                }
+            }
+            Set<String> cashKeys = cashInfo.keySet();
+            Iterator<String> iteratorCashKeys = cashKeys.iterator();
+
+            Collection<ArrayList<Double>> cashValues = cashInfo.values();
+            Iterator<ArrayList<Double>> iteratorCashValues = cashValues.iterator();
+            Double prevCashValue = 0.0;
+
+            Collection<ArrayList<LocalDateTime>> cashTimes = cashInfoTime.values();
+            Iterator<ArrayList<LocalDateTime>> iteratorCashTimes = cashTimes.iterator();
+
+            while (iteratorCashKeys.hasNext()) {
+                ArrayList<Double> nextValue = iteratorCashValues.next();
+                ArrayList<LocalDateTime> nextTime = iteratorCashTimes.next();
+                for(int i = 0; i<nextValue.size(); i++) {
+                    if(nextTime.get(i).isBefore(pastTime)) {
+                        prevCashValue += nextValue.get(i);
+                    }
+                }
+
+            }
+
+            changeValue.add(prevVal+prevCashValue);
+        }
+        return changeValue;
+    }
 
 }
