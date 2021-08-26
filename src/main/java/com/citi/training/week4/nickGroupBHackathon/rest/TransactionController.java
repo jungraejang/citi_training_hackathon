@@ -23,12 +23,6 @@ import java.util.*;
 @RequestMapping("/transactions")
 public class TransactionController {
 
-
-    Hashtable<String, ArrayList<Integer>> symbol = new Hashtable<>();
-    Hashtable<String, ArrayList<Double>> cashInfo = new Hashtable<>();
-    Hashtable<String, ArrayList<LocalDateTime>> symbolTime = new Hashtable<>();
-    Hashtable<String, ArrayList<LocalDateTime>> cashInfoTime = new Hashtable<>();
-
     @Autowired
     private TransactionService transactionService;
 
@@ -39,61 +33,81 @@ public class TransactionController {
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "/{id}")
-    public Collection<Transaction> getTransactionsByInvestor(@PathVariable("id") int id) {
+    public ArrayList<Transaction> getTransactionsByInvestor(@PathVariable("id") int id) {
         Collection<Transaction> investorTransactions = transactionService.getTransactionsByInvestorId(id);
         Iterator<Transaction> iterator = investorTransactions.iterator();
-        Collection<Transaction> investments=new ArrayList<>();
+        ArrayList<Transaction> investments=new ArrayList<>();
 
         while(iterator.hasNext()) {
-            Transaction next = iterator.next();
-            if(next.getType().equals("Cash")){
-                if(cashInfo.containsKey(next.getSymbol())){
-                    cashInfo.get(next.getSymbol()).add(next.getPrice());
-                    cashInfoTime.get(next.getSymbol()).add(next.getTimeStamp());
-                }
-                else{
-                    ArrayList<Double> prices = new ArrayList<>();
-                    prices.add(next.getPrice());
-                    cashInfo.put(next.getSymbol(), prices);
-                    ArrayList<LocalDateTime> times = new ArrayList<>();
-                    times.add(next.getTimeStamp());
-                    cashInfoTime.put(next.getSymbol(), times);
-                }
-            }else {
-                if(symbol.containsKey(next.getSymbol())){
-                    symbol.get(next.getSymbol()).add(next.getAmount());
-                    symbolTime.get(next.getSymbol()).add(next.getTimeStamp());
-                }else {
-                    ArrayList<Integer> amount = new ArrayList<>();
-                    amount.add(next.getAmount());
-                    symbol.put(next.getSymbol(), amount);
-                    ArrayList<LocalDateTime> times = new ArrayList<>();
-                    times.add(next.getTimeStamp());
-                    symbolTime.put(next.getSymbol(), times);
-                }
-                investments.add(next);
-            }
+            investments.add(iterator.next());
         }
         return investments;
     }
+
+    @RequestMapping(method = RequestMethod.GET, value = "/{id}/stock_totals")
+    public ArrayList<Object> stockTotals(@PathVariable("id") int id) throws IOException {
+
+        ArrayList<Transaction> transactions=getTransactionsByInvestor(id);
+
+        Double allTotal = 0.0;
+        Hashtable<String,Double> allStockValues = new Hashtable<>();
+        for(Transaction t:transactions) {
+            if(!t.getType().equals("Cash")){
+                String symbol = t.getSymbol();
+                Stock stock = YahooFinance.get(symbol);
+                Double price = t.getAmount()*stock.getQuote().getPrice().doubleValue();
+                if(allStockValues.containsKey(symbol)){
+                    allStockValues.replace(symbol,allStockValues.get(symbol)+price);
+                }
+                else{
+                    allStockValues.put(symbol,price);
+                }
+                allTotal+=price;
+            }
+        }
+        ArrayList<Object> totals = new ArrayList<>();
+        totals.add(allTotal);
+        totals.add(allStockValues);
+        return totals;
+    }
+
+    @RequestMapping(method = RequestMethod.GET, value = "/{id}/cash_total")
+    public ArrayList<Object> getInvestorValuation(@PathVariable("id") int id) {
+        ArrayList<Transaction> transactions=getTransactionsByInvestor(id);
+        Double cashValue = 0.0;
+        Hashtable<String,Double> allCashValues = new Hashtable<>();
+
+        for(Transaction t:transactions) {
+            if(t.getType().equals("Cash")){
+                String symbol = t.getSymbol();
+                Double price = t.getPrice();
+                if(allCashValues.containsKey(symbol)){
+                    allCashValues.replace(symbol,allCashValues.get(symbol)+price);
+                }
+                else{
+                    allCashValues.put(symbol,price);
+                }
+                cashValue+=price;
+            }
+        }
+        ArrayList<Object> totals = new ArrayList<>();
+        totals.add(cashValue);
+        totals.add(allCashValues);
+
+        return totals;
+    }
+
     @RequestMapping(method = RequestMethod.GET, value = "/{id}/total_over_time")
     public Collection<Double> portfolioTotalOverTime(@PathVariable("id") int id) throws IOException {
+        ArrayList<Transaction> transactions=getTransactionsByInvestor(id);
         Double currentValue = Double.valueOf(stockTotals(id).get(0).toString());
-        ArrayList<Double> changeValue = new ArrayList<>();
-        Double prevValWeek = 0.0;
-        Double prevValMonth = 0.0;
-        Double prevValQuarter = 0.0;
-        Double prevValYear = 0.0;
-        Set<String> keys = symbol.keySet();
-        Iterator<String> iteratorKeys = keys.iterator();
+        ArrayList<Double> changeValue = new ArrayList<>(Arrays.asList(0.0,0.0,0.0,0.0));
 
-        Collection<ArrayList<Integer>> values = symbol.values();
-        Iterator<ArrayList<Integer>> iteratorValues = values.iterator();
-        Collection<ArrayList<LocalDateTime>> times = symbolTime.values();
-        Iterator<ArrayList<LocalDateTime>> iteratorTimes = times.iterator();
-
-
-        while(iteratorKeys.hasNext()) {
+        for(Transaction t:transactions) {
+            if(!t.getType().equals("Cash")){
+                symbol =
+                Stock stock = YahooFinance.get(iteratorKeys.next(),true);
+            }
             Stock stock = YahooFinance.get(iteratorKeys.next(),true);
 
             LocalDateTime currentTime = LocalDateTime.now();
@@ -154,80 +168,10 @@ public class TransactionController {
 
         return changeValue ;
     }
-    @RequestMapping(method = RequestMethod.GET, value = "/{id}/stock_totals")
-    public ArrayList<Object> stockTotals(@PathVariable("id") int id) throws IOException {
-
-        symbol = new Hashtable<>();
-
-        getTransactionsByInvestor(id);
-        Set<String> keys = symbol.keySet();
-        Iterator<String> iteratorKeys = keys.iterator();
-
-        Collection<ArrayList<Integer>> values = symbol.values();
-        Iterator<ArrayList<Integer>> iteratorValues = values.iterator();
-
-        Hashtable<String,Double> allStockValues = new Hashtable<>();
-        while(iteratorKeys.hasNext()) {
-            Double totalValue = 0.0;
-            Stock stock = YahooFinance.get(iteratorKeys.next());
-            ArrayList<Integer> amountVals = iteratorValues.next();
-            for(int i =0;i<amountVals.size();i++){
-                totalValue += amountVals.get(i) * stock.getQuote().getPrice().doubleValue();
-            }
-            allStockValues.put(stock.getSymbol(),totalValue);
-
-        }
-        ArrayList<Object> totals = new ArrayList<>();
-        Double allTotal = 0.0;
-        for(Double vals:allStockValues.values()){
-            allTotal+=vals;
-        }
-        totals.add(allTotal);
-        totals.add(allStockValues);
-        return totals;
-    }
-
-    @RequestMapping(method = RequestMethod.GET, value = "/{id}/cash_total")
-    public ArrayList<Object> getInvestorValuation(@PathVariable("id") int id) {
-
-        cashInfo = new Hashtable<>();
-
-        getTransactionsByInvestor(id);
-
-        Set<String> keys = cashInfo.keySet();
-        Iterator<String> iteratorKeys = keys.iterator();
-
-        Collection<ArrayList<Double>> values = cashInfo.values();
-        Iterator<ArrayList<Double>> iteratorValues = values.iterator();
-        Double cashValue = 0.0;
-
-        Hashtable<String,Double> allCashValues = new Hashtable<>();
-
-        while (iteratorKeys.hasNext()) {
-            String next = iteratorKeys.next();
-            ArrayList<Double> nextValue = iteratorValues.next();
-            Double cashAccTotal = 0.0;
-            for(Double n:nextValue) {
-                cashAccTotal += n;
-            }
-            allCashValues.put(next,cashAccTotal);
-            cashValue += cashAccTotal;
-        }
-
-        ArrayList<Object> totals = new ArrayList<>();
-        totals.add(cashValue);
-        totals.add(allCashValues);
-
-        return totals;
-
-
-    }
 
     @RequestMapping(method = RequestMethod.GET, value = "/{id}/cash_total_over_time")
     public ArrayList<Double> getInvestorValuationOverTime(@PathVariable("id") int id) {
-
-        cashInfo = new Hashtable<>();
-        cashInfoTime = new Hashtable<>();
+        ArrayList<Transaction> transactions=getTransactionsByInvestor(id);
         Double currentValue = Double.valueOf(getInvestorValuation(id).get(0).toString());
 
         LocalDateTime currentTime = LocalDateTime.now();
@@ -236,79 +180,50 @@ public class TransactionController {
         LocalDateTime lastQuarter = currentTime.minusMonths(3);
         LocalDateTime yearToDate = LocalDateTime.of(currentTime.getYear(), Month.JANUARY, 1, 0,0,0);
 
-        Set<String> keys = cashInfo.keySet();
-        Iterator<String> iteratorKeys = keys.iterator();
+        ArrayList<Double> allCashTotalOverTime = new ArrayList<>(Arrays.asList(0.0,0.0,0.0,0.0));
 
-        Collection<ArrayList<Double>> values = cashInfo.values();
-        Iterator<ArrayList<Double>> iteratorValues = values.iterator();
-        Double cashValueWeek = 0.0;
-        Double cashValueMonth = 0.0;
-        Double cashValueQuarter = 0.0;
-        Double cashValueYear = 0.0;
-
-        ArrayList<Double> allCashTotalOverTime = new ArrayList<>();
-
-        Collection<ArrayList<LocalDateTime>> times = cashInfoTime.values();
-        Iterator<ArrayList<LocalDateTime>> iteratorTimes = times.iterator();
-
-        while (iteratorKeys.hasNext()) {
-            String next = iteratorKeys.next();
-            ArrayList<Double> nextValue = iteratorValues.next();
-            ArrayList<LocalDateTime> nextTime = iteratorTimes.next();
-            Double cashAccTotalWeek = 0.0;
-            Double cashAccTotalMonth = 0.0;
-            Double cashAccTotalQuarter = 0.0;
-            Double cashAccTotalYear = 0.0;
-            for(int i = 0; i<nextValue.size(); i++) {
-                if(nextTime.get(i).isBefore(lastWeek)) {
-                    cashAccTotalWeek += nextValue.get(i);
+        for(Transaction t:transactions) {
+            if(t.getType().equals("Cash")){
+                String next = t.getSymbol();
+                Double nextValue = t.getPrice();
+                LocalDateTime nextTime = t.getTimeStamp();
+                if(nextTime.isBefore(lastWeek)) {
+                    allCashTotalOverTime.set(0,allCashTotalOverTime.get(0)+nextValue);
                 }
-                if(nextTime.get(i).isBefore(lastMonth)) {
-                    cashAccTotalMonth += nextValue.get(i);
+                if(nextTime.isBefore(lastMonth)) {
+                    allCashTotalOverTime.set(1,allCashTotalOverTime.get(1)+nextValue);
                 }
-                if(nextTime.get(i).isBefore(lastQuarter)) {
-                    cashAccTotalQuarter += nextValue.get(i);
+                if(nextTime.isBefore(lastQuarter)) {
+                    allCashTotalOverTime.set(2,allCashTotalOverTime.get(2)+nextValue);
                 }
-                if(nextTime.get(i).isBefore(yearToDate)) {
-                    cashAccTotalYear += nextValue.get(i);
+                if(nextTime.isBefore(yearToDate)) {
+                    allCashTotalOverTime.set(3,allCashTotalOverTime.get(3)+nextValue);
                 }
-
             }
-
-            cashValueWeek += cashAccTotalWeek;
-            cashValueMonth += cashAccTotalMonth;
-            cashValueQuarter += cashAccTotalQuarter;
-            cashValueYear += cashAccTotalYear;
         }
 
-        allCashTotalOverTime.add(currentValue-cashValueWeek);
-        allCashTotalOverTime.add(currentValue-cashValueMonth);
-        allCashTotalOverTime.add(currentValue-cashValueQuarter);
-        allCashTotalOverTime.add(currentValue-cashValueYear);
-
+        allCashTotalOverTime.set(0,currentValue-allCashTotalOverTime.get(0));
+        allCashTotalOverTime.set(1,currentValue-allCashTotalOverTime.get(1));
+        allCashTotalOverTime.set(2,currentValue-allCashTotalOverTime.get(2));
+        allCashTotalOverTime.set(3,currentValue-allCashTotalOverTime.get(3));
 
         return allCashTotalOverTime;
-
-
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "/{id}/market_movers")
     public ArrayList<Object> marketMovers(@PathVariable("id") int id) throws IOException {
-        symbol = new Hashtable<>();
-
-        getTransactionsByInvestor(id);
-
-        Set<String> keys = symbol.keySet();
-        Iterator<String> iteratorKeys = keys.iterator();
+        ArrayList<Transaction> transactions=getTransactionsByInvestor(id);
 
         Hashtable<String,Double> marketMovers = new Hashtable<>();
         Hashtable<String,Double> maxs = new Hashtable<>();
         Hashtable<String,Double> mins = new Hashtable<>();
-        while(iteratorKeys.hasNext()) {
-            Stock stock = YahooFinance.get(iteratorKeys.next());
-            Double stockChange = stock.getQuote().getPrice().doubleValue() - stock.getQuote().getPreviousClose().doubleValue();
-            Double percentChange = (stockChange*100) / (Math.abs(stock.getQuote().getPreviousClose().doubleValue()));
-            marketMovers.put(stock.getSymbol(),percentChange);
+        for(Transaction t:transactions) {
+            if(t.getType().equals("Cash")&&!marketMovers.containsKey(t.getSymbol())){
+                Stock stock = YahooFinance.get(t.getSymbol());
+                Double stockChange = stock.getQuote().getPrice().doubleValue() - stock.getQuote().getPreviousClose().doubleValue();
+                Double percentChange = (stockChange*100) / (Math.abs(stock.getQuote().getPreviousClose().doubleValue()));
+                marketMovers.put(stock.getSymbol(),percentChange);
+            }
         }
         for(int i = 0; i < 5 ; i++) {
             Double localMax = 0.0;
@@ -328,7 +243,6 @@ public class TransactionController {
                     minString = s;
                 }
             }
-
             if(!maxString.isEmpty()){
                 maxs.put(maxString,localMax);
                 marketMovers.remove(maxString);
@@ -337,11 +251,7 @@ public class TransactionController {
                 mins.put(minString, localMin);
                 marketMovers.remove(minString);
             }
-
-
         }
-
-
 
         ArrayList<Object> maxsAndMins = new ArrayList<>();
         maxsAndMins.add(maxs);
