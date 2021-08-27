@@ -292,27 +292,95 @@ public class TransactionController {
     public ArrayList<Double> networthYearPlot(@PathVariable("id") int id) throws IOException {
         ArrayList<Transaction> transactions=getTransactionsByInvestor(id);
         ArrayList<Double> yearlyValue = new ArrayList<>(Arrays.asList(0.0,0.0,0.0,0.0,0.0));
-        Calendar firstDayOfYear = Calendar.getInstance();
-        for (int j = 0; j < 5; j++) {
-            firstDayOfYear.set(firstDayOfYear.get(Calendar.YEAR)-j,0,1);
-            Double prevVal = 0.0;
-            for(Transaction t:transactions) {
-                String symbol = t.getSymbol();
-                LocalDateTime transactionTime = t.getTimeStamp();
-                Calendar dayCalendar = Calendar.getInstance();
-                Date stockDate = Date.from(transactionTime.atZone(ZoneId.systemDefault()).toInstant());
-                dayCalendar.setTime(stockDate);
-                if(!t.getType().equals("Cash")){
-                    Stock stock = YahooFinance.get(symbol, true);
-                    HistoricalQuote dayQuote = stock.getHistory(firstDayOfYear, Interval.DAILY).get(0);
-                    Double dayPrice = dayQuote.getClose().doubleValue();
-                    Double price = t.getAmount()*dayPrice;
-                    if (dayCalendar.before(firstDayOfYear)) {
-                        yearlyValue.set(j,yearlyValue.get(j)+price);
-                    }
+        Calendar firstDayOfYear1 = Calendar.getInstance();
+        Calendar firstDayOfYear2 = Calendar.getInstance();
+        Calendar firstDayOfYear3 = Calendar.getInstance();
+        Calendar firstDayOfYear4 = Calendar.getInstance();
+        Calendar firstDayOfYear5 = Calendar.getInstance();
+        firstDayOfYear1.set(firstDayOfYear1.get(Calendar.YEAR),0,1);
+        firstDayOfYear2.set(firstDayOfYear1.get(Calendar.YEAR)-1,0,1);
+        firstDayOfYear3.set(firstDayOfYear2.get(Calendar.YEAR)-1,0,1);
+        firstDayOfYear4.set(firstDayOfYear3.get(Calendar.YEAR)-1,0,1);
+        firstDayOfYear5.set(firstDayOfYear4.get(Calendar.YEAR)-1,0,1);
+        Calendar dayCalendar = Calendar.getInstance();
+        for(Transaction t:transactions) {
+            String symbol = t.getSymbol();
+            dayCalendar.setTime(Date.from(t.getTimeStamp().atZone(ZoneId.systemDefault()).toInstant()));
+            if(!t.getType().equals("Cash")){
+                Double price;
+                Stock stock = YahooFinance.get(symbol, true);
+                if (dayCalendar.before(firstDayOfYear5)) {
+                    price = t.getAmount()*stock.getHistory(firstDayOfYear1, Interval.DAILY).get(0).getClose().doubleValue();
+                    yearlyValue.set(0,yearlyValue.get(0)+price);
+                    price = t.getAmount()*stock.getHistory(firstDayOfYear2, Interval.DAILY).get(0).getClose().doubleValue();
+                    yearlyValue.set(1,yearlyValue.get(1)+price);
+                    price = t.getAmount()*stock.getHistory(firstDayOfYear3, Interval.DAILY).get(0).getClose().doubleValue();
+                    yearlyValue.set(2,yearlyValue.get(2)+price);
+                    price = t.getAmount()*stock.getHistory(firstDayOfYear4, Interval.DAILY).get(0).getClose().doubleValue();
+                    yearlyValue.set(3,yearlyValue.get(3)+price);
+                    price = t.getAmount()*stock.getHistory(firstDayOfYear5, Interval.DAILY).get(0).getClose().doubleValue();
+                    yearlyValue.set(4,yearlyValue.get(4)+price);
                 }else{
-                    if(dayCalendar.before(firstDayOfYear)) {
-                        yearlyValue.set(j,yearlyValue.get(j)+t.getPrice());
+                    if (dayCalendar.before(firstDayOfYear4)) {
+                        price = t.getAmount()*stock.getHistory(firstDayOfYear1, Interval.DAILY).get(0).getClose().doubleValue();
+                        yearlyValue.set(0,yearlyValue.get(0)+price);
+                        price = t.getAmount()*stock.getHistory(firstDayOfYear2, Interval.DAILY).get(0).getClose().doubleValue();
+                        yearlyValue.set(1,yearlyValue.get(1)+price);
+                        price = t.getAmount()*stock.getHistory(firstDayOfYear3, Interval.DAILY).get(0).getClose().doubleValue();
+                        yearlyValue.set(2,yearlyValue.get(2)+price);
+                        price = t.getAmount()*stock.getHistory(firstDayOfYear4, Interval.DAILY).get(0).getClose().doubleValue();
+                        yearlyValue.set(3,yearlyValue.get(3)+price);
+                    }else{
+                        if (dayCalendar.before(firstDayOfYear3)) {
+                            price = t.getAmount()*stock.getHistory(firstDayOfYear1, Interval.DAILY).get(0).getClose().doubleValue();
+                            yearlyValue.set(0,yearlyValue.get(0)+price);
+                            price = t.getAmount()*stock.getHistory(firstDayOfYear2, Interval.DAILY).get(0).getClose().doubleValue();
+                            yearlyValue.set(1,yearlyValue.get(1)+price);
+                            price = t.getAmount()*stock.getHistory(firstDayOfYear3, Interval.DAILY).get(0).getClose().doubleValue();
+                            yearlyValue.set(2,yearlyValue.get(2)+price);
+                        }else{
+                            if (dayCalendar.before(firstDayOfYear2)) {
+                                price = t.getAmount()*stock.getHistory(firstDayOfYear1, Interval.DAILY).get(0).getClose().doubleValue();
+                                yearlyValue.set(0,yearlyValue.get(0)+price);
+                                price = t.getAmount()*stock.getHistory(firstDayOfYear2, Interval.DAILY).get(0).getClose().doubleValue();
+                                yearlyValue.set(1,yearlyValue.get(1)+price);
+                            }else{
+                                if (dayCalendar.before(firstDayOfYear1)) {
+                                    price = t.getAmount()*stock.getHistory(firstDayOfYear1, Interval.DAILY).get(0).getClose().doubleValue();
+                                    yearlyValue.set(0,yearlyValue.get(0)+price);
+                                }
+                            }
+                        }
+                    }
+                }
+            }else{
+                if (dayCalendar.before(firstDayOfYear5)) {
+                    yearlyValue.set(0,yearlyValue.get(0)+t.getPrice());
+                    yearlyValue.set(1,yearlyValue.get(1)+t.getPrice());
+                    yearlyValue.set(2,yearlyValue.get(2)+t.getPrice());
+                    yearlyValue.set(3,yearlyValue.get(3)+t.getPrice());
+                    yearlyValue.set(4,yearlyValue.get(4)+t.getPrice());
+                }else{
+                    if (dayCalendar.before(firstDayOfYear4)) {
+                        yearlyValue.set(0,yearlyValue.get(0)+t.getPrice());
+                        yearlyValue.set(1,yearlyValue.get(1)+t.getPrice());
+                        yearlyValue.set(2,yearlyValue.get(2)+t.getPrice());
+                        yearlyValue.set(3,yearlyValue.get(3)+t.getPrice());
+                    }else{
+                        if (dayCalendar.before(firstDayOfYear3)) {
+                            yearlyValue.set(0,yearlyValue.get(0)+t.getPrice());
+                            yearlyValue.set(1,yearlyValue.get(1)+t.getPrice());
+                            yearlyValue.set(2,yearlyValue.get(2)+t.getPrice());
+                        }else{
+                            if (dayCalendar.before(firstDayOfYear2)) {
+                                yearlyValue.set(0,yearlyValue.get(0)+t.getPrice());
+                                yearlyValue.set(1,yearlyValue.get(1)+t.getPrice());
+                            }else{
+                                if (dayCalendar.before(firstDayOfYear1)) {
+                                    yearlyValue.set(0,yearlyValue.get(0)+t.getPrice());
+                                }
+                            }
+                        }
                     }
                 }
             }
